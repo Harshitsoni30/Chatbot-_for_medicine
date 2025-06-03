@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException, status, Depends
-from app.models.auth import UserRegistration, OTPVerifyRequest, UserLogin, Tokenforlogout
+from app.models.auth import UserRegistration, OTPVerifyRequest, UserLogin, Tokenforlogout, CreateSession
 from app.models.users import get_user_by_email, get_user_by_username, create_user,verify_password, get_current_user
 from app.validations.sender_email import generate_otp, send_otp_email
 from app.validations.token_auth import create_access_token, decode_access_token
 from jose.exceptions import JWTError
-
+from app.db.sessions import  session_id_collection
+from uuid import uuid4
 
 
 
@@ -85,3 +86,16 @@ async def logout(user:Tokenforlogout,
     blacklisted_tokens.add(token)
 
     return {"message": "Logout Successfully"}
+
+@app.post("/get-session-id")
+async def get_session_id(current_user : dict = Depends(get_current_user)):
+    session_id = str(uuid4())
+    session = CreateSession(
+        session_id=session_id,
+        user_email = current_user['email']
+    )
+    await session_id_collection.insert_one(session.dict())
+    return {
+        "message":"Session id is created",
+        "session_id":session_id
+    }

@@ -15,4 +15,7 @@ class UserLogin(BaseModel):
 
 class Tokenforlogout(BaseModel):
     email:EmailStr
-    
+
+class CreateSession(BaseModel):
+    session_id: str
+    user_email: EmailStr
