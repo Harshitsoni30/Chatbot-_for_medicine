@@ -1,8 +1,11 @@
 from app.db.sessions import  user_collection
 from passlib.context import CryptContext
-
+from fastapi import HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
+from app.validations.token_auth import  decode_access_token
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+blacklisted_tokens = set()
 
 #genrating hash  password
 def register_password(password:str):
@@ -23,3 +26,17 @@ async def get_user_by_username(username:str):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+async def get_current_user(token: str=Depends(oauth2_scheme)):
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401 , detail="Invalid or expired token")
+    
+    user = await user_collection.find_one({'email':payload.get("email")})
+
+    if not user:
+        raise HTTPException(status_code=401 , detail="user not found")
+    user["token"] = token
+    return user

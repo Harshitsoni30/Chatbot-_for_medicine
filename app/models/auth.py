@@ -12,3 +12,7 @@ class OTPVerifyRequest(BaseModel):
 class UserLogin(BaseModel):
     email:EmailStr
     password:str
+
+class Tokenforlogout(BaseModel):
+    email:EmailStr
+    
