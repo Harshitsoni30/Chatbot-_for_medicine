@@ -1,0 +1,2 @@
+django==5.2.1
+aiosmtplib-4.0.1
