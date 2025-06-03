@@ -1,7 +1,12 @@
 from fastapi import FastAPI, HTTPException, status, Depends
-from app.models.auth import UserRegistration, OTPVerifyRequest
-from app.models.users import get_user_by_email, get_user_by_username, create_user
+from app.models.auth import UserRegistration, OTPVerifyRequest, UserLogin
+from app.models.users import get_user_by_email, get_user_by_username, create_user,verify_password
 from app.validations.sender_email import generate_otp, send_otp_email
+from app.validations.token_auth import create_access_token, decode_access_token
+
+
+
+
 app = FastAPI()
 
 otp_store = {}
@@ -44,3 +49,21 @@ async def register_response_otp(data:OTPVerifyRequest):
         "message":"User registered Successfully",
         "user_id":user_id
     }
+@app.post("/login")
+async def login(user:UserLogin):
+    db_user = await get_user_by_email(user.email)
+    if not db_user:
+        raise HTTPException(status_code=404 , detail="User not found")
+    if not verify_password(user.password, db_user['password']):
+        raise HTTPException(status_code=401, detail="Inavlid password")
+    
+    token = create_access_token(
+        data={"email":user.email},
+        
+    )
+    return {
+        "token":token,
+        "email": db_user["email"],
+        "username": db_user["username"]
+    }
+    

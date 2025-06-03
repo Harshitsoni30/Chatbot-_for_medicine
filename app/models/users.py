@@ -20,3 +20,6 @@ async def get_user_by_email(email: str):
 
 async def get_user_by_username(username:str):
     return await user_collection.find_one({"username":username})
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
