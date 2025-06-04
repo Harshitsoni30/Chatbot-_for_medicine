@@ -40,3 +40,9 @@ async def get_current_user(token: str=Depends(oauth2_scheme)):
         raise HTTPException(status_code=401 , detail="user not found")
     user["token"] = token
     return user
+
+def generate_title(prompt: str) -> str:
+    title = prompt.strip().split('.')[0]  # till first period
+    if len(title.split()) > 8:
+        title = ' '.join(title.split()[:8])
+    return title.capitalize()

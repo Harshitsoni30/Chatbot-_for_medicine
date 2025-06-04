@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
+from fastapi import Form, File, UploadFile
 
 class UserRegistration(BaseModel):
     username:str = Field(..., min_lenght=3)
@@ -19,3 +20,11 @@ class Tokenforlogout(BaseModel):
 class CreateSession(BaseModel):
     session_id: str
     user_email: EmailStr
+
+class ChatInput(BaseModel):
+    prompt:str
+    session_id:str
+
+class UploadPDF(BaseModel):
+    session_id: str = Form(...),
+    uploaded_pdf: UploadFile = File(...)

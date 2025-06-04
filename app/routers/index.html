@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Streaming Chat with File Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #outputRaw { background: #222; color: #0f0; padding: 1em; border-radius: 8px; min-height: 100px; }
+        #outputMarkdown { background: #fff; color: #222; padding: 1em; border-radius: 8px; min-height: 200px; margin-top: 1em; border: 1px solid #ccc; }
+        button { padding: 0.5em 1em; font-size: 1em; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <h2>Test /chat/stream-recipe Streaming Endpoint</h2>
+
+    <!-- File Upload -->
+    <input type="file" id="pdfFile" accept=".pdf" />
+    <button onclick="uploadPDF()">Upload PDF</button>
+    <br><br>
+
+    <input id="userQuery" type="text" placeholder="Enter your question" style="width: 350px; padding: 0.5em; font-size: 1em; margin-bottom: 1em;" />
+    <button id="startBtn">Start Streaming</button>
+
+    <h4>Raw Markdown Output:</h4>
+    <pre id="outputRaw"></pre>
+    <h4>Rendered Markdown:</h4>
+    <div id="outputMarkdown"></div>
+
+    <script>
+    let uploadedFilePath = null;
+
+    async function uploadPDF() {
+        const fileInput = document.getElementById('pdfFile');
+        if (!fileInput.files.length) {
+            alert("Please select a PDF file first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('uploaded_pdf', fileInput.files[0]);
+        formData.append('session_id', '5392059d-49fd-43e5-bebf-9cda5e37e1a9'); 
+
+        try {
+            const res = await fetch('http://127.0.0.1:8000/upload-pdf', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcnNoaXRzb25pY2kxOUBhY3JvcG9saXMuaW4iLCJleHAiOjE3NDkwOTQ1OTN9.F-j7bFBqH-nIn6fKNcS5ZW-loqvyqI4sNvNHr3IYnw8'
+                    // No Content-Type for FormData
+                },
+                body: formData
+            });
+
+            if (!res.ok) throw new Error('Failed to upload file');
+
+            const result = await res.json();
+            uploadedFilePath = result.file_path || "Uploaded successfully!";
+            alert("PDF uploaded!");
+        } catch (err) {
+            alert("Upload failed: " + err.message);
+        }
+    }
+
+    document.getElementById('startBtn').onclick = async function() {
+        const outputRaw = document.getElementById('outputRaw');
+        const outputMarkdown = document.getElementById('outputMarkdown');
+        const userQuery = document.getElementById('userQuery').value;
+
+        outputRaw.textContent = '';
+        outputMarkdown.innerHTML = '';
+
+        const body = JSON.stringify({
+            session_id: "5392059d-49fd-43e5-bebf-9cda5e37e1a9",
+            prompt: userQuery,
+            file_path: uploadedFilePath
+        });
+
+        try {
+            const response = await fetch('http://127.0.0.1:8000/session-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcnNoaXRzb25pY2kxOUBhY3JvcG9saXMuaW4iLCJleHAiOjE3NDkwOTQ1OTN9.F-j7bFBqH-nIn6fKNcS5ZW-loqvyqI4sNvNHr3IYnw8'
+                },
+                body: body
+            });
+
+            if (!response.body) {
+                outputRaw.textContent = 'Streaming not supported in this browser.';
+                outputMarkdown.innerHTML = '';
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let done = false;
+            let fullText = '';
+
+            while (!done) {
+                const { value, done: doneReading } = await reader.read();
+                done = doneReading;
+                if (value) {
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+                    outputRaw.textContent = fullText;
+                    outputMarkdown.innerHTML = marked.parse(fullText);
+                    window.scrollTo(0, document.body.scrollHeight);
+                }
+            }
+        } catch (err) {
+            outputRaw.textContent = 'Error: ' + err.message;
+            outputMarkdown.innerHTML = '';
+        }
+    };
+    </script>
+</body>
+</html>

@@ -1,15 +1,29 @@
 from fastapi import FastAPI, HTTPException, status, Depends
-from app.models.auth import UserRegistration, OTPVerifyRequest, UserLogin, Tokenforlogout, CreateSession
-from app.models.users import get_user_by_email, get_user_by_username, create_user,verify_password, get_current_user
+from app.models.auth import UserRegistration, OTPVerifyRequest, UserLogin, Tokenforlogout, CreateSession, ChatInput, UploadPDF
+from app.models.users import get_user_by_email, get_user_by_username, create_user,verify_password, get_current_user, generate_title
 from app.validations.sender_email import generate_otp, send_otp_email
 from app.validations.token_auth import create_access_token, decode_access_token
 from jose.exceptions import JWTError
-from app.db.sessions import  session_id_collection
+from app.db.sessions import  session_id_collection, session_title_collection
 from uuid import uuid4
-
-
+import os
+import shutil
+from datetime import datetime
+from app.routers.agent import load_combined_knowledge_base, create_agent
+from fastapi.responses import StreamingResponse
 
 app = FastAPI()
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify your frontend origin like ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 otp_store = {}
 
@@ -99,3 +113,69 @@ async def get_session_id(current_user : dict = Depends(get_current_user)):
         "message":"Session id is created",
         "session_id":session_id
     }
+
+
+UPLOAD_DIRECTORY = "app/data/uploads"
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+
+@app.post("/session-chat")
+async def create_session_chat(chat: ChatInput):
+    prompt = chat.prompt
+    session_id = chat.session_id
+
+    pdf_path = os.path.join(UPLOAD_DIRECTORY, f"{session_id}.pdf")
+    knowledge = load_combined_knowledge_base(pdf_path)
+    agent = create_agent(knowledge=knowledge)
+    existing_session = await session_title_collection.find_one({
+        "session_id": session_id
+    })
+
+    full_response = ""
+    async def streaming_response():
+        nonlocal full_response
+        print_response = agent.run(prompt, stream=True)
+
+        for chunk in print_response:
+            if chunk:
+                full_response += chunk.content  
+                yield chunk.content  
+
+        user_msg = {"role": "user", "content": prompt}
+        assistant_msg = {"role": "assistant", "content": full_response}
+
+        if existing_session:
+            await session_title_collection.update_one(
+                {"session_id": session_id},
+                {
+                    "$push": {"message": {"$each": [user_msg, assistant_msg]}},
+                    "$set": {"updated_at": datetime.utcnow()}
+                }
+            )
+        else:
+            title = generate_title(prompt)
+            new_session = {
+                "session_id": session_id,
+                "title": title,
+                "message": [user_msg, assistant_msg],
+                "created_at": datetime.utcnow()
+            }
+            await session_title_collection.insert_one(new_session)
+
+    return StreamingResponse(
+        streaming_response(),
+        media_type="text/event-stream",  
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
+from fastapi import Form, File, UploadFile
+
+@app.post("/upload-pdf")
+async def upload_pdf(session_id: str = Form(...),
+    upload_pdf: UploadFile = File(...)):
+    file_path = os.path.join(UPLOAD_DIRECTORY, f"{session_id}.pdf")
+    with open(file_path, "wb") as f:
+        shutil.copyfileobj(upload_pdf.file, f)
+    
+    return {"message": "File uploaded successfully", "file_path": file_path}
