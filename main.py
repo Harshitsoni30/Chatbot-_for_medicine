@@ -11,6 +11,7 @@ import shutil
 from datetime import datetime
 from app.routers.agent import load_combined_knowledge_base, create_agent
 from fastapi.responses import StreamingResponse
+from fastapi import Form, File, UploadFile, Query
 
 app = FastAPI()
 
@@ -119,7 +120,8 @@ UPLOAD_DIRECTORY = "app/data/uploads"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
 @app.post("/session-chat")
-async def create_session_chat(chat: ChatInput):
+async def create_session_chat(chat: ChatInput,
+                            current_user: dict = Depends(get_current_user)):
     prompt = chat.prompt
     session_id = chat.session_id
 
@@ -169,7 +171,6 @@ async def create_session_chat(chat: ChatInput):
             "Connection": "keep-alive",
         },
     )
-from fastapi import Form, File, UploadFile
 
 @app.post("/upload-pdf")
 async def upload_pdf(session_id: str = Form(...),
@@ -177,5 +178,21 @@ async def upload_pdf(session_id: str = Form(...),
     file_path = os.path.join(UPLOAD_DIRECTORY, f"{session_id}.pdf")
     with open(file_path, "wb") as f:
         shutil.copyfileobj(upload_pdf.file, f)
-    
     return {"message": "File uploaded successfully", "file_path": file_path}
+
+
+@app.get("/get-chat")
+async def get_chat(
+    session_id: str = Query(...),  
+    current_user: dict = Depends(get_current_user)):
+    query = {
+        "session_id": session_id
+    }
+    chats_cursor = session_title_collection.find(query)
+    chats_history = await chats_cursor.to_list(length=1000)
+
+    if not chats_history:
+        raise HTTPException(status_code=404, detail="No chats found for this session")
+    for chat in chats_history:
+        chat["id"] = str(chat["_id"])
+    return {"chats": chats_history}
