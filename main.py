@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or specify your frontend origin like ["http://localhost:3000"]
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -127,7 +127,7 @@ async def create_session_chat(chat: ChatInput,
 
     pdf_path = os.path.join(UPLOAD_DIRECTORY, f"{session_id}.pdf")
     knowledge = load_combined_knowledge_base(pdf_path)
-    agent = create_agent(knowledge=knowledge)
+    agent = await create_agent(knowledge=knowledge)
     existing_session = await session_title_collection.find_one({
         "session_id": session_id
     })

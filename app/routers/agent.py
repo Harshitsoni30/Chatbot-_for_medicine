@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from phi.knowledge.combined import CombinedKnowledgeBase
 import uuid
 import os
-
+from app.models.users import get_prompt_text
 
 load_dotenv()
 gemini_api_key = os.getenv("GOOGLE_API_KEY")
@@ -25,7 +25,7 @@ def load_combined_knowledge_base(file_path: str):
     )
 
     system_knowledge_base = PDFKnowledgeBase(
-        path="app\data\system_data\Harshit_Soni_Bio (2).pdf",
+        path="app\\data\\system_data\\Harshit_Soni_Bio (2).pdf",
         vector_db=system_vector_database,
         reader=PDFReader(ignore_images=True, skip_empty=True)
     )
@@ -63,54 +63,16 @@ def load_combined_knowledge_base(file_path: str):
     combined_kb.load(upsert=True)
     return combined_kb
 
-def create_agent(knowledge: CombinedKnowledgeBase):
+async def create_agent(knowledge: CombinedKnowledgeBase):
+
+    prompt_text = await get_prompt_text()
+    print(prompt_text)
     agent= Agent(
         name="AI Assistance",
         model=Gemini(id="gemini-1.5-flash"),
         tools=[DuckDuckGo(), Newspaper4k()],
         description="An AI assistant to answer questions from your uploaded PDF or basic query.",
-        instructions=[
-            """
-            Information Retrieval Priority:
-            1. Knowledge Base Search:
-                - Search both system and user-uploaded PDFs
-                - Share all information (both private and public )
-                - Provide complete and accurate details
-            
-            2. Web Search (if knowledge base lacks information):
-                - Search top 5 relevant links via DuckDuckGo
-                - Extract and analyze content using Newspaper4k
-                - Skip unavailable URLs
-                - Filter out:
-                    * Video links
-                    * Promotional content
-                    * Redundant information
-            
-            Response Guidelines:
-            1. Structure:
-                - Use step-by-step format
-                - Include clear headings
-                - Add bullet points or numbered lists
-                - Use code blocks for technical content
-            
-            2. Writing Style:
-                - Be clear and concise
-                - Focus on actionable information
-                - Maintain friendly, conversational tone
-                - Avoid filler words ("here", "etc.", "kind of")
-            
-            3. Context Awareness:
-                - Build on previous conversation
-                - Avoid repeating information
-                - Use knowledge base only when relevant
-            
-            4. Interaction Protocol:
-                - Greet: "Hey!", "Hi there!"
-                - Thanks: "Sure!", "You're welcome!"
-                - Farewell: "Take care!", "Catch you later!"
-                - Handle negative messages with calm professionalism
-            """
-        ],
+        instructions=[prompt_text],
         add_references=True,
         markdown=True,
         knowledge_base =knowledge,

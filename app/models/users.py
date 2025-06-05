@@ -1,4 +1,4 @@
-from app.db.sessions import  user_collection
+from app.db.sessions import  user_collection, bot_prompt_collection
 from passlib.context import CryptContext
 from fastapi import HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -46,3 +46,10 @@ def generate_title(prompt: str) -> str:
     if len(title.split()) > 8:
         title = ' '.join(title.split()[:8])
     return title.capitalize()
+
+
+async def get_prompt_text(prompt_id: int = 3) -> str:
+    prompt_data = await bot_prompt_collection.find_one({"id": prompt_id})
+    return prompt_data["prompt_text"] if prompt_data else ""
+
+A   

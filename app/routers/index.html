@@ -39,7 +39,7 @@
 
         const formData = new FormData();
         formData.append('uploaded_pdf', fileInput.files[0]);
-        formData.append('session_id', '5392059d-49fd-43e5-bebf-9cda5e37e1a9'); 
+        formData.append('session_id', 'f59f4a0b-ed05-4223-aa95-7e0128d96603'); 
 
         try {
             const res = await fetch('http://127.0.0.1:8000/upload-pdf', {
@@ -70,17 +70,17 @@
         outputMarkdown.innerHTML = '';
 
         const body = JSON.stringify({
-            session_id: "5392059d-49fd-43e5-bebf-9cda5e37e1a9",
+            session_id: "f59f4a0b-ed05-4223-aa95-7e0128d96603",
             prompt: userQuery,
             file_path: uploadedFilePath
         });
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/session-chat', {
+            const response = await fetch('http://127.0.0.1:8001/session-chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcnNoaXRzb25pY2kxOUBhY3JvcG9saXMuaW4iLCJleHAiOjE3NDkwOTQ1OTN9.F-j7bFBqH-nIn6fKNcS5ZW-loqvyqI4sNvNHr3IYnw8'
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImdvbHUzMDA5MjBAZ21haWwuY29tIiwiZXhwIjoxNzQ5MTk4ODk5fQ.4nRisaCF8NDWisNZ9jF1Vg9o2E-6dwYzGJroNK22jk0'
                 },
                 body: body
             });
