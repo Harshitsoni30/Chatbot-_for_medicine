@@ -20,5 +20,5 @@ async def send_otp_email(email_to: str, otp: str):
         port=587,
         start_tls=True,
         username="hsoni2841@gmail.com",
-        password="riny zbwr fvkc whfa",  # Use App Password
+        password="riny zbwr fvkc whfa",  
     )

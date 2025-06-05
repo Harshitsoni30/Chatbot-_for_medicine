@@ -11,21 +11,23 @@ import uuid
 from fastapi import HTTPException
 from phi.knowledge.combined import CombinedKnowledgeBase
 import uuid
+import httpx
 import os
-from app.models.users import get_prompt_text
+
 
 load_dotenv()
-gemini_api_key = os.getenv("GOOGLE_API_KEY")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+DJANGO_API_URL = os.getenv("DJANGO_API_URL")
 
 def load_combined_knowledge_base(file_path: str):
 
     system_vector_database = ChromaDb(
         collection="System_knowledge_base",
-        embedder=GeminiEmbedder(api_key=gemini_api_key)
+        embedder=GeminiEmbedder(api_key=GEMINI_API_KEY)
     )
 
     system_knowledge_base = PDFKnowledgeBase(
-        path="app\\data\\system_data\\Harshit_Soni_Bio (2).pdf",
+        path="app\\data\\system_data\\nlem2022.pdf",
         vector_db=system_vector_database,
         reader=PDFReader(ignore_images=True, skip_empty=True)
     )
@@ -34,7 +36,7 @@ def load_combined_knowledge_base(file_path: str):
 
     user_vector_database = ChromaDb(
         collection=collection_name,
-        embedder=GeminiEmbedder(api_key=gemini_api_key)
+        embedder=GeminiEmbedder(api_key=GEMINI_API_KEY)
     )
 
     user_knowledge_base = PDFKnowledgeBase(
@@ -44,13 +46,13 @@ def load_combined_knowledge_base(file_path: str):
     )
 
     
-    system_knowledge_base.load(upsert=True)
+    system_knowledge_base.load(upsert=False)
     user_knowledge_base.load(upsert=True)
    
 
     combined_vector_db = ChromaDb(
         collection=f"combined_konwledge_base_{uuid.uuid4()}",
-        embedder=GeminiEmbedder(api_key=gemini_api_key)
+        embedder=GeminiEmbedder(api_key=GEMINI_API_KEY)
     )
 
     
@@ -59,25 +61,32 @@ def load_combined_knowledge_base(file_path: str):
         vector_db=combined_vector_db
     )
 
-    
-    combined_kb.load(upsert=True)
+    combined_kb.load(upsert=False)
     return combined_kb
-
+    
 async def create_agent(knowledge: CombinedKnowledgeBase):
 
-    prompt_text = await get_prompt_text()
-    print(prompt_text)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{DJANGO_API_URL}/1/")
+
+    if response.status_code == 200:
+        data = response.json()
+        prompt_text = data.get("prompt_text", "")
+        model_name = data.get("model_name","")
+        description = data.get("description","")
+    else:
+        print("Failed to fetch prompt")
+        prompt_text = "Default fallback prompt."
     agent= Agent(
         name="AI Assistance",
-        model=Gemini(id="gemini-1.5-flash"),
+        model=Gemini(id=model_name),
         tools=[DuckDuckGo(), Newspaper4k()],
-        description="An AI assistant to answer questions from your uploaded PDF or basic query.",
+        description=description,
         instructions=[prompt_text],
         add_references=True,
         markdown=True,
         knowledge_base =knowledge,
        
     )
-    # agent.print_response("when Harshit join valere ")
     
     return agent

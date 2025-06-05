@@ -12,10 +12,13 @@ from datetime import datetime
 from app.routers.agent import load_combined_knowledge_base, create_agent
 from fastapi.responses import StreamingResponse
 from fastapi import Form, File, UploadFile, Query
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+blacklisted_tokens = set()
+otp_store = {}
 
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +29,6 @@ app.add_middleware(
 )
 
 
-otp_store = {}
 
 @app.post("/register-otp-request")
 async def register_with_otp(user :UserRegistration):
@@ -60,9 +62,6 @@ async def register_response_otp(data:OTPVerifyRequest):
     
     user_data =stored["user_data"]
     user_id =await create_user(user_data)
-
-    
-
     return {
         "message":"User registered Successfully",
         "user_id":user_id
@@ -84,8 +83,6 @@ async def login(user:UserLogin):
         "email": db_user["email"],
         "username": db_user["username"]
     }
-
-blacklisted_tokens = set()
 
 @app.post("/logout")
 async def logout(user:Tokenforlogout,
@@ -196,3 +193,5 @@ async def get_chat(
     for chat in chats_history:
         chat["id"] = str(chat["_id"])
     return {"chats": chats_history}
+
+
