@@ -5,6 +5,6 @@
 app.data
 prototype.txt
 myenv
-app.data/
+app/data/
 venv
 prototype.txt

@@ -6,7 +6,7 @@ import aiosmtplib
 def generate_otp():
     return str(random.randint(1000, 9999))
 
-
+# Setup for sending emails to users
 async def send_otp_email(email_to: str, otp: str):
     message = EmailMessage()
     message["From"] = "hsoni2841@gmail.com"

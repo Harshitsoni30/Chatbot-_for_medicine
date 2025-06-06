@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-
+# Configure MongoDB by setting the connection URL and initializing the target database for operations
 MONGO_URI = "mongodb://localhost:27017"
 client = AsyncIOMotorClient(MONGO_URI)
 db = client.ChatBotValere

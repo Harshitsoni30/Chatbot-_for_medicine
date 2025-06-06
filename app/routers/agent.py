@@ -13,12 +13,18 @@ from phi.knowledge.combined import CombinedKnowledgeBase
 import uuid
 import httpx
 import os
+from app.models.users import get_bot_by_id
 
-
+# Load environment variables from .env file
 load_dotenv()
+
+# Retrieve the API key from the environment
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 DJANGO_API_URL = os.getenv("DJANGO_API_URL")
 
+
+# Knowledge Base Setup
+# knowledge combine knowledge for user uploaded and system uploded pdf
 def load_combined_knowledge_base(file_path: str):
 
     system_vector_database = ChromaDb(
@@ -27,7 +33,7 @@ def load_combined_knowledge_base(file_path: str):
     )
 
     system_knowledge_base = PDFKnowledgeBase(
-        path="app\\data\\system_data\\nlem2022.pdf",
+        path="app\\data\\system_data\\Harshit_Soni_Bio (2).pdf",
         vector_db=system_vector_database,
         reader=PDFReader(ignore_images=True, skip_empty=True)
     )
@@ -64,19 +70,13 @@ def load_combined_knowledge_base(file_path: str):
     combined_kb.load(upsert=False)
     return combined_kb
     
+    
 async def create_agent(knowledge: CombinedKnowledgeBase):
+    data = await get_bot_by_id(1)
+    prompt_text = data.get("prompt_text", "")
+    model_name = data.get("model_name","")
+    description = data.get("description","")
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{DJANGO_API_URL}/1/")
-
-    if response.status_code == 200:
-        data = response.json()
-        prompt_text = data.get("prompt_text", "")
-        model_name = data.get("model_name","")
-        description = data.get("description","")
-    else:
-        print("Failed to fetch prompt")
-        prompt_text = "Default fallback prompt."
     agent= Agent(
         name="AI Assistance",
         model=Gemini(id=model_name),
@@ -87,6 +87,5 @@ async def create_agent(knowledge: CombinedKnowledgeBase):
         markdown=True,
         knowledge_base =knowledge,
        
-    )
-    
+    ) 
     return agent

@@ -19,6 +19,9 @@ app = FastAPI()
 blacklisted_tokens = set()
 otp_store = {}
 
+UPLOAD_DIRECTORY = "app/data/uploads"
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,8 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
+## API to register a new user with username, email, and password.
 @app.post("/register-otp-request")
 async def register_with_otp(user :UserRegistration):
     existing_user_email = await get_user_by_email(user.email)
@@ -49,6 +51,7 @@ async def register_with_otp(user :UserRegistration):
     return {
         "message":"OTP send successfully"
     }
+# API endpoint to verify the OTP response during user registration 
 @app.post("/register-otp-response")
 async def register_response_otp(data:OTPVerifyRequest):
     email = data.email
@@ -66,6 +69,12 @@ async def register_response_otp(data:OTPVerifyRequest):
         "message":"User registered Successfully",
         "user_id":user_id
     }
+
+# API endpoint to authenticate a user and provide access token upon successful login
+"""
+Endpoint to authenticate users with their credentials (email and password).
+On successful authentication, returns an access token for authorized access.
+"""
 @app.post("/login")
 async def login(user:UserLogin):
     db_user = await get_user_by_email(user.email)
@@ -84,6 +93,7 @@ async def login(user:UserLogin):
         "username": db_user["username"]
     }
 
+# API endpoint to log out the authenticated user and invalidate their session/token
 @app.post("/logout")
 async def logout(user:Tokenforlogout,
                 current_user: dict = Depends(get_current_user)):
@@ -99,6 +109,8 @@ async def logout(user:Tokenforlogout,
 
     return {"message": "Logout Successfully"}
 
+
+# Endpoint to generate a unique session ID for the user/client
 @app.post("/get-session-id")
 async def get_session_id(current_user : dict = Depends(get_current_user)):
     session_id = str(uuid4())
@@ -113,9 +125,7 @@ async def get_session_id(current_user : dict = Depends(get_current_user)):
     }
 
 
-UPLOAD_DIRECTORY = "app/data/uploads"
-os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
-
+# API endpoint to handle chat messages within a specific user session
 @app.post("/session-chat")
 async def create_session_chat(chat: ChatInput,
                             current_user: dict = Depends(get_current_user)):
@@ -169,6 +179,7 @@ async def create_session_chat(chat: ChatInput,
         },
     )
 
+# API endpoint to upload a PDF file for knowledge base
 @app.post("/upload-pdf")
 async def upload_pdf(session_id: str = Form(...),
     upload_pdf: UploadFile = File(...)):
@@ -178,6 +189,7 @@ async def upload_pdf(session_id: str = Form(...),
     return {"message": "File uploaded successfully", "file_path": file_path}
 
 
+# Display chat history
 @app.get("/get-chat")
 async def get_chat(
     session_id: str = Query(...),  
