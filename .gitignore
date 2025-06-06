@@ -2,9 +2,10 @@
 **/__pycache__/
 *.pyc
 *.sqlite3
-app.data
 prototype.txt
 myenv
 app/data/
 venv
 prototype.txt
+
+
